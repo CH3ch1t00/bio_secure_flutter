@@ -75,15 +75,18 @@
 - Cámara bloqueada al pasar de enrolamiento a marcado → dispose explícito + reintento.
 - Botón físico "Atrás" minimizaba la app → `PopScope` global con fallback por rol.
 - Face enrollment no persistía → flags locales + fotos en documentos de la app.
+- Correo "no válido" al iniciar sesión → normalización (minúsculas, sin espacios).
+- Lag del reloj/cámara en marcado → reloj aislado en widget propio + detección facial en modo rápido/baja resolución con throttle.
 
 ## Página 11 — Resultados
 - `flutter analyze`: 0 errores.
 - APK debug construido e instalado en dispositivo (Huawei CLK-LX3).
+- APK release construido (100.8 MB) y optimizado.
 - App lanzada y verificada (PID activo).
 - Repositorio público en GitHub.
 
 ## Página 12 — Roadmap / pendientes
-- Google Maps para editor visual de sedes.
+- Mapa visual de sedes con OpenStreetMap (sin API key) — implementado.
 - Notificaciones push (FCM) y widget de escritorio.
 - Sincronización offline.
 - Renombrar proyecto Atlas y crear colecciones (acción del usuario).
