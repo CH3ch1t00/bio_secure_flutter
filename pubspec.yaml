@@ -1,0 +1,80 @@
+name: bio_secure_flutter
+description: BioSecure multiplataforma (Flutter) - migracion de la app Android.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  firebase_storage: ^12.3.4
+  firebase_messaging: ^15.1.3
+  # firebase_functions: ^5.0.0
+
+  # Auth / biometrics
+  google_sign_in: ^6.2.1
+  local_auth: ^2.3.0
+
+  # Location / maps
+  geolocator: ^13.0.1
+  google_maps_flutter: ^2.9.0
+
+  # Camera / ML
+  camera: ^0.12.2
+  google_mlkit_face_detection: ^0.12.0
+
+  # QR
+  mobile_scanner: ^5.2.3
+  qr_flutter: ^4.1.0
+
+  # UI
+  lottie: ^3.1.2
+  fl_chart: ^0.69.0
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+
+  # Utils
+  path: ^1.9.0
+  intl: ^0.20.3
+  uuid: ^4.5.1
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
+
+  # Navigation
+  go_router: ^14.3.0
+
+  # Background / widget
+  home_widget: ^0.7.0
+  share_plus: ^12.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/lottie/
+    - assets/images/
+    - assets/models/facenet.tflite
+  # fonts:
+  #   - family: ...

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "103319710145",
+    "project_id": "biosecure2",
+    "storage_bucket": "biosecure2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103319710145:android:346c1703229cedfcc52740",
+        "android_client_info": {
+          "package_name": "com.biosecure.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "103319710145-6qflcm64gbgd3fa91kfahn50cd48jvcp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.biosecure.app",
+            "certificate_hash": "99f0c30efe5fc61dcf1ebd063a4c8b418e29371f"
+          }
+        },
+        {
+          "client_id": "103319710145-f2dd8416d5j060uue01mquo09n5n1pt8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgkKofFD__7LMHp7CbfisXumtchOZbkXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "103319710145-f2dd8416d5j060uue01mquo09n5n1pt8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
