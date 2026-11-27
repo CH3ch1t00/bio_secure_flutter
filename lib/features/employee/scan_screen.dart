@@ -29,8 +29,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
   bool _busy = false;
   String? _error;
-  DateTime _now = DateTime.now();
-  Timer? _clock;
 
   CameraController? _cameraController;
   CameraDescription? _cameraDescription;
@@ -42,6 +40,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   String _faceHint = '';
   bool _processingFace = false;
   bool _faceStreamStarted = false;
+  DateTime _lastFaceProcess = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -50,17 +49,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       options: FaceDetectorOptions(
         enableClassification: false,
         minFaceSize: 0.15,
-        performanceMode: FaceDetectorMode.accurate,
+        performanceMode: FaceDetectorMode.fast,
       ),
     );
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
   }
 
   @override
   void dispose() {
-    _clock?.cancel();
     _stopFaceStream();
     _cameraController?.dispose();
     _faceDetector?.close();
@@ -426,7 +421,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       _cameraDescription = front ?? cameras.first;
       final controller = CameraController(
         _cameraDescription!,
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -470,6 +465,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     _faceStreamStarted = true;
     _cameraController!.startImageStream((CameraImage image) async {
       if (_processingFace) return;
+      // Limita el análisis a ~4 fps para no saturar la CPU.
+      final now = DateTime.now();
+      if (now.difference(_lastFaceProcess).inMilliseconds < 250) return;
+      _lastFaceProcess = now;
       _processingFace = true;
       try {
         final inputImage = _inputImageFromCameraImage(
@@ -479,18 +478,25 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         if (inputImage != null && _faceDetector != null) {
           final faces = await _faceDetector!.processImage(inputImage);
           if (!mounted) return;
-          setState(() {
-            if (faces.isEmpty) {
-              _faceDetected = false;
-              _faceHint = 'Coloca tu rostro frente a la cámara';
-            } else if (faces.length > 1) {
-              _faceDetected = false;
-              _faceHint = 'Solo una persona a la vez';
-            } else {
-              _faceDetected = true;
-              _faceHint = 'Rostro detectado · listo para marcar';
-            }
-          });
+          final bool detected;
+          final String hint;
+          if (faces.isEmpty) {
+            detected = false;
+            hint = 'Coloca tu rostro frente a la cámara';
+          } else if (faces.length > 1) {
+            detected = false;
+            hint = 'Solo una persona a la vez';
+          } else {
+            detected = true;
+            hint = 'Rostro detectado · listo para marcar';
+          }
+          // Solo reconstruye si el estado cambió (evita rebuilds por frame).
+          if (detected != _faceDetected || hint != _faceHint) {
+            setState(() {
+              _faceDetected = detected;
+              _faceHint = hint;
+            });
+          }
         }
       } catch (_) {
         // ignorar errores puntuales de análisis
@@ -565,50 +571,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Marcar asistencia',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        DateFormat("EEEE, d 'de' MMMM", 'es')
-                            .format(_now),
-                        style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    DateFormat('HH:mm:ss').format(_now),
-                    style: TextStyle(
-                      color: colors.onPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            const _LiveHeader(),
             const SizedBox(height: 16),
 
             // Selector Huella / Facial.
@@ -1111,6 +1074,79 @@ class _ResultRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Encabezado con reloj en vivo. Mantiene su propio timer para que el resto
+/// de la pantalla (cámara, listas, tarjetas) NO se reconstruya cada segundo.
+class _LiveHeader extends StatefulWidget {
+  const _LiveHeader();
+
+  @override
+  State<_LiveHeader> createState() => _LiveHeaderState();
+}
+
+class _LiveHeaderState extends State<_LiveHeader> {
+  late DateTime _now = DateTime.now();
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Marcar asistencia',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                DateFormat("EEEE, d 'de' MMMM", 'es').format(_now),
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            DateFormat('HH:mm:ss').format(_now),
+            style: TextStyle(
+              color: colors.onPrimary,
+              fontWeight: FontWeight.bold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

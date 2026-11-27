@@ -40,7 +40,7 @@ class FirebaseErrors {
   static String _auth(String code, String? fallback) {
     switch (code) {
       case 'invalid-email':
-        return 'El correo no es válido.';
+        return 'El correo no es válido. Verifica que no tenga espacios ni caracteres especiales.';
       case 'user-disabled':
         return 'Esta cuenta fue deshabilitada.';
       case 'user-not-found':

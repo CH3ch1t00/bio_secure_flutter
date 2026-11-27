@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -48,16 +50,27 @@ class _RegisterEmployeeScreenState extends ConsumerState<RegisterEmployeeScreen>
   }
 
   Future<void> _submit() async {
-    final profile = await ref.read(currentProfileProvider.future);
-    if (profile == null || profile.companyId.isEmpty) {
+    _error = null;
+    final profile = await ref
+        .read(currentProfileProvider.future)
+        .timeout(const Duration(seconds: 15), onTimeout: () => null);
+    if (profile == null) {
+      setState(() => _error = 'No se pudo cargar tu perfil. Revisa tu conexión.');
+      return;
+    }
+    if (profile.companyId.isEmpty) {
       setState(() => _error = 'Tu perfil no tiene companyId.');
+      return;
+    }
+    if (!profile.isAdmin) {
+      setState(() => _error = 'Solo un administrador puede registrar empleados.');
       return;
     }
     if (_firstName.text.trim().isEmpty) {
       setState(() => _error = 'Escribe el nombre del empleado.');
       return;
     }
-    final email = _email.text.trim();
+    final email = _email.text.trim().toLowerCase().replaceAll(RegExp(r'\\s+'), '');
     if (!email.contains('@') || _password.text.length < 6) {
       setState(
         () => _error =
@@ -72,22 +85,45 @@ class _RegisterEmployeeScreenState extends ConsumerState<RegisterEmployeeScreen>
 
     FirebaseApp? secondary;
     try {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Creando cuenta en Firebase Auth…'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
       const name = 'employeeCreator';
       try {
         final existing = Firebase.app(name);
-        await existing.delete();
+        await existing.delete().timeout(const Duration(seconds: 5));
       } catch (_) {}
       secondary = await Firebase.initializeApp(
         name: name,
         options: DefaultFirebaseOptions.currentPlatform,
-      );
+      ).timeout(const Duration(seconds: 15));
       final auth = FirebaseAuth.instanceFor(app: secondary);
-      final cred = await auth.createUserWithEmailAndPassword(
-        email: email,
-        password: _password.text,
-      );
+
+      final cred = await auth
+          .createUserWithEmailAndPassword(
+            email: email,
+            password: _password.text,
+          )
+          .timeout(const Duration(seconds: 30));
       final uid = cred.user!.uid;
-      await auth.signOut();
+
+      // Cerrar sesión en la app secundaria (no bloquear si falla).
+      try {
+        await auth.signOut().timeout(const Duration(seconds: 10));
+      } catch (_) {}
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Guardando perfil en Firestore…'),
+          duration: Duration(seconds: 2),
+        ),
+      );
 
       final user = BioUser(
         uid: uid,
@@ -101,7 +137,10 @@ class _RegisterEmployeeScreenState extends ConsumerState<RegisterEmployeeScreen>
         shiftId: _shiftId,
         sedeId: _sedeId,
       );
-      await ref.read(userRepositoryProvider).createUser(user);
+      await ref
+          .read(userRepositoryProvider)
+          .createUser(user)
+          .timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
       await _showQrDialog(user);
@@ -116,11 +155,17 @@ class _RegisterEmployeeScreenState extends ConsumerState<RegisterEmployeeScreen>
         _shiftId = null;
         _sedeId = null;
       });
+    } on TimeoutException {
+      setState(
+        () => _error =
+            'La operación tardó demasiado. Revisa tu conexión a internet y '
+            'los permisos de Firestore (¿el admin tiene companyId?).',
+      );
     } catch (e) {
       setState(() => _error = FirebaseErrors.message(e));
     } finally {
       try {
-        await secondary?.delete();
+        await secondary?.delete().timeout(const Duration(seconds: 5));
       } catch (_) {}
       if (mounted) setState(() => _busy = false);
     }

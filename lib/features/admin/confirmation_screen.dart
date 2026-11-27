@@ -51,18 +51,18 @@ class ConfirmationScreen extends ConsumerWidget {
                 style: TextStyle(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: 24),
-              Card(
+              const Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     children: [
-const _Line(
+                      _Line(
                         icon: Icons.verified_user_outlined,
                         label: 'Validación',
                         value: 'QR verificado',
                       ),
                       Divider(height: 18),
-const _Line(
+                      _Line(
                         icon: Icons.cloud_done_outlined,
                         label: 'Registro',
                         value: 'Sincronizado',

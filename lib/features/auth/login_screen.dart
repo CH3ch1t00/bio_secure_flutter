@@ -56,7 +56,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginEmail() async {
-    if (_email.text.trim().isEmpty || _pass.text.isEmpty) {
+    final email = _email.text.trim().toLowerCase().replaceAll(RegExp(r'\\s+'), '');
+    _email.text = email;
+    if (email.isEmpty || _pass.text.isEmpty) {
       setState(() => _error = 'Escribe tu correo y contraseña.');
       return;
     }
@@ -67,9 +69,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final cred = await ref
           .read(authRepositoryProvider)
-          .signInWithEmail(_email.text.trim(), _pass.text);
+          .signInWithEmail(email, _pass.text);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_email', _email.text.trim());
+      await prefs.setString('last_email', email);
       await _afterLogin(cred.user!.uid);
     } catch (e) {
       setState(() => _error = FirebaseErrors.message(e));
