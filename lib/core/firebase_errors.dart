@@ -50,7 +50,8 @@ class FirebaseErrors {
         return 'Correo o contraseña incorrectos.';
       case 'too-many-requests':
         return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
-      case 'network-request-failed':
+      case 'requires-recent-login':
+        return 'Por seguridad, vuelve a iniciar sesión antes de cambiar la contraseña.';
         return 'Sin conexión. Revisa tu internet.';
       case 'operation-not-allowed':
         return 'El método de inicio de sesión no está habilitado en Firebase Console.';

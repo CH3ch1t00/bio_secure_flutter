@@ -79,12 +79,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     }
 
     Position? best;
-    for (var attempt = 0; attempt < 3; attempt++) {
+    for (var attempt = 0; attempt < 2; attempt++) {
       try {
         final pos = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.bestForNavigation,
-            timeLimit: Duration(seconds: 12),
+            timeLimit: Duration(seconds: 8),
           ),
         );
         if (best == null || pos.accuracy < best.accuracy) best = pos;
