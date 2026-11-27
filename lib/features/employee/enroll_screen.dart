@@ -49,7 +49,7 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
     super.initState();
     _detector = FaceDetector(
       options: FaceDetectorOptions(
-        performanceMode: FaceDetectorMode.accurate,
+        performanceMode: FaceDetectorMode.fast,
         minFaceSize: 0.12,
       ),
     );
@@ -114,6 +114,32 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
     }
   }
 
+  String _friendlyError(Object e) {
+    final raw = e.toString().replaceFirst('Exception: ', '');
+    // Evitar textos enormes (stack traces / platform exceptions).
+    if (raw.length > 140) {
+      return 'No se pudo capturar la foto. Revisa la cámara y vuelve a intentarlo.';
+    }
+    if (raw.toLowerCase().contains('camera')) {
+      return 'La cámara tuvo un problema. Pulsa "Reiniciar cámara" e inténtalo de nuevo.';
+    }
+    return raw;
+  }
+
+  Future<void> _retryCamera() async {
+    setState(() {
+      _cameraReady = false;
+      _cameraError = false;
+      _cameraErrorMessage = '';
+    });
+    final ctrl = _controller;
+    _controller = null;
+    try {
+      await ctrl?.dispose();
+    } catch (_) {}
+    await _initCamera();
+  }
+
   Future<void> _capture() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
     if (_busy || _captured >= _target) return;
@@ -123,6 +149,10 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
     });
     try {
       final xfile = await _controller!.takePicture();
+      // En algunos dispositivos takePicture deja la vista previa congelada.
+      try {
+        await _controller?.resumePreview();
+      } catch (_) {}
 
       // Validación con ML Kit: exactamente un rostro.
       final faces = await _detector!.processImage(
@@ -155,8 +185,16 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
         _capturedPaths.add(dest);
       });
     } catch (e) {
-      if (mounted) {
-        setState(() => _error = FirebaseErrors.message(e));
+      final msg = _friendlyError(e);
+      if (mounted) setState(() => _error = msg);
+      // Si la cámara se quedó congelada, la reiniciamos.
+      if (_controller != null && !_cameraError) {
+        try {
+          await _controller?.dispose();
+        } catch (_) {}
+        _controller = null;
+        _cameraReady = false;
+        await _initCamera();
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -437,6 +475,14 @@ class _EnrollScreenState extends ConsumerState<EnrollScreen> {
             style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 18),
+          if (_cameraError) ...[
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _retryCamera,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reiniciar cámara'),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (_captured < _target)
             FilledButton.icon(
               onPressed:
